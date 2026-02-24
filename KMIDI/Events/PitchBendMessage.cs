@@ -5,15 +5,27 @@ namespace Kermalis.MIDI;
 
 public sealed class PitchBendMessage : MIDIMessage, IMIDIChannelMessage
 {
+	internal override bool IsInvalid { get; set; }
+
 	private const int CENTER = 0x2000;
 
+	/// <summary>
+	/// The MIDI Channel used
+	/// </summary>
 	public byte Channel { get; }
 
+	/// <summary>
+	/// The LSB value used
+	/// </summary>
 	public byte LSB { get; }
+	/// <summary>
+	/// The MSB value used
+	/// </summary>
 	public byte MSB { get; }
 
-	internal PitchBendMessage(EndianBinaryReader r, byte channel)
+	internal PitchBendMessage(EndianBinaryReader r, byte channel, bool isInvalid)
 	{
+		IsInvalid = isInvalid;
 		Channel = channel;
 
 		LSB = r.ReadByte();
@@ -29,6 +41,13 @@ public sealed class PitchBendMessage : MIDIMessage, IMIDIChannelMessage
 		}
 	}
 
+	/// <summary>
+	/// Creates a new Pitch Bend Channel using LSB and MSB values
+	/// </summary>
+	/// <param name="channel">The MIDI Channel to use</param>
+	/// <param name="lsb">The LSB value to apply</param>
+	/// <param name="msb">The MSB value to apply</param>
+	/// <exception cref="ArgumentOutOfRangeException">If LSB or MSB is out of range</exception>
 	public PitchBendMessage(byte channel, byte lsb, byte msb)
 	{
 		Utils.ValidateMIDIChannel(channel);
@@ -45,6 +64,11 @@ public sealed class PitchBendMessage : MIDIMessage, IMIDIChannelMessage
 		LSB = lsb;
 		MSB = msb;
 	}
+	/// <summary>
+	/// Creates a new Pitch Bend Channel using a Pitch value
+	/// </summary>
+	/// <param name="channel">The MIDI Channel to use</param>
+	/// <param name="pitch">The Pitch value to apply</param>
 	public PitchBendMessage(byte channel, int pitch)
 	{
 		Utils.ValidateMIDIChannel(channel);
@@ -76,6 +100,7 @@ public sealed class PitchBendMessage : MIDIMessage, IMIDIChannelMessage
 		uint uPitch = ((uint)msb << 7) | lsb;
 		return (int)uPitch - CENTER;
 	}
+	/// <summary>Outputs LSB and MSB values in the range [0, 127]</summary>
 	public static void GetLSBAndMSBFromPitchInt(int pitch, out byte lsb, out byte msb)
 	{
 		if (pitch is > (0x3FFF - CENTER) or < (0 - CENTER))
@@ -100,6 +125,10 @@ public sealed class PitchBendMessage : MIDIMessage, IMIDIChannelMessage
 		w.WriteByte(MSB);
 	}
 
+	/// <summary>
+	/// Outputs a string with the details of the <see cref="PitchBendMessage"/>
+	/// </summary>
+	/// <returns>A string containing details of the <see cref="PitchBendMessage"/></returns>
 	public override string ToString()
 	{
 		return $"{nameof(PitchBendMessage)} [{nameof(Channel)} {Channel}"

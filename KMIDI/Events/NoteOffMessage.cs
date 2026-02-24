@@ -5,13 +5,25 @@ namespace Kermalis.MIDI;
 
 public sealed class NoteOffMessage : MIDIMessage, IMIDIChannelMessage
 {
+	internal override bool IsInvalid { get; set; }
+
+	/// <summary>
+	/// The MIDI Channel used
+	/// </summary>
 	public byte Channel { get; }
 
+	/// <summary>
+	/// The MIDI Note used
+	/// </summary>
 	public MIDINote Note { get; }
+	/// <summary>
+	/// The amount of Velocity used
+	/// </summary>
 	public byte Velocity { get; }
 
-	internal NoteOffMessage(EndianBinaryReader r, byte channel)
+	internal NoteOffMessage(EndianBinaryReader r, byte channel, bool isInvalid)
 	{
+		IsInvalid = isInvalid;
 		Channel = channel;
 
 		Note = r.ReadEnum<MIDINote>();
@@ -27,6 +39,13 @@ public sealed class NoteOffMessage : MIDIMessage, IMIDIChannelMessage
 		}
 	}
 
+	/// <summary>
+	/// Creates a new Note Off Message
+	/// </summary>
+	/// <param name="channel">The MIDI Channel to use</param>
+	/// <param name="note">The Note to use</param>
+	/// <param name="velocity">The amount of Velocity to use</param>
+	/// <exception cref="ArgumentOutOfRangeException">If the Note or Velocity is out of range</exception>
 	public NoteOffMessage(byte channel, MIDINote note, byte velocity)
 	{
 		Utils.ValidateMIDIChannel(channel);
@@ -55,6 +74,10 @@ public sealed class NoteOffMessage : MIDIMessage, IMIDIChannelMessage
 		w.WriteByte(Velocity);
 	}
 
+	/// <summary>
+	/// Outputs a string with the details of the <see cref="NoteOffMessage"/>
+	/// </summary>
+	/// <returns>A string containing details of the <see cref="NoteOffMessage"/></returns>
 	public override string ToString()
 	{
 		return $"{nameof(NoteOffMessage)} [{nameof(Channel)} {Channel}"

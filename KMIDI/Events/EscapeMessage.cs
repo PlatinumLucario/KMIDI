@@ -5,22 +5,36 @@ namespace Kermalis.MIDI;
 
 public sealed class EscapeMessage : MIDIMessage
 {
+	/// <summary>
+	/// The Variable Length of the data
+	/// </summary>
+	public int VariableLength { get; }
+	/// <summary>
+	/// The raw data in a byte array
+	/// </summary>
 	public byte[] Data { get; }
+	internal override bool IsInvalid { get; set; }
 
-	internal EscapeMessage(EndianBinaryReader r)
+	internal EscapeMessage(EndianBinaryReader r, bool isInvalid)
 	{
-		int len = Utils.ReadVariableLength(r);
-		if (len == 0)
+		IsInvalid = isInvalid;
+		VariableLength = Utils.ReadVariableLength(r);
+		if (VariableLength == 0)
 		{
 			Data = Array.Empty<byte>();
 		}
 		else
 		{
-			Data = new byte[len];
+			Data = new byte[VariableLength];
 			r.ReadBytes(Data);
 		}
 	}
 
+	/// <summary>
+	/// Creates a new Escape Message
+	/// </summary>
+	/// <param name="data">The Data to use</param>
+	/// <exception cref="ArgumentException">If the data is not [0, 0x0FFFFFFF]</exception>
 	public EscapeMessage(byte[] data)
 	{
 		if (!Utils.IsValidVariableLengthValue(data.Length))
@@ -29,6 +43,7 @@ public sealed class EscapeMessage : MIDIMessage
 		}
 
 		Data = data;
+		VariableLength = Data.Length;
 	}
 
 	internal override byte GetCMDByte()
@@ -42,6 +57,10 @@ public sealed class EscapeMessage : MIDIMessage
 		w.WriteBytes(Data);
 	}
 
+	/// <summary>
+	/// Outputs a string with the details of the <see cref="EscapeMessage"/>
+	/// </summary>
+	/// <returns>A string containing details of the <see cref="EscapeMessage"/></returns>
 	public override string ToString()
 	{
 		return $"{nameof(EscapeMessage)} [Length: {Data.Length}]";

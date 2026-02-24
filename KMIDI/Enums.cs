@@ -141,7 +141,32 @@ public enum MetaMessageType : byte
 	ProprietaryEvent = 0x7F,
 	MAX,
 }
-/// <summary>Used with <see cref="MetaMessageType.KeySignature"/></summary>
+/// <summary>Used only with text type <see cref="MetaMessage"/></summary>
+public enum MetaMessageTextType : byte
+{
+	Text = 1,
+	Copyright,
+	TrackName,
+	InstrumentName,
+	Lyric,
+	Marker,
+	CuePoint,
+	ProgramName,
+	DeviceName,
+	/// <summary>Reserved for ASCII treatment</summary>
+	Reserved_A,
+	/// <summary>Reserved for ASCII treatment</summary>
+	Reserved_B,
+	/// <summary>Reserved for ASCII treatment</summary>
+	Reserved_C,
+	/// <summary>Reserved for ASCII treatment</summary>
+	Reserved_D,
+	/// <summary>Reserved for ASCII treatment</summary>
+	Reserved_E,
+	/// <summary>Reserved for ASCII treatment</summary>
+	Reserved_F,
+}
+/// <summary>Used with <see cref="MetaMessageType.KeySignature"/>, C is 0, negative values from -1 (Flat_1) to -8 (MIN) are Flat, positive values from +1 (Sharp_1) to +8 (MAX) are Sharp</summary>
 public enum KeySignatureSF : sbyte
 {
 	MIN = -8,
@@ -162,7 +187,7 @@ public enum KeySignatureSF : sbyte
 	Sharp_7 = +7,
 	MAX = +8,
 }
-/// <summary>Used with <see cref="MetaMessageType.KeySignature"/></summary>
+/// <summary>Used with <see cref="MetaMessageType.KeySignature"/>, it determines if it's a Major, Minor or Max key</summary>
 public enum KeySignatureMI : byte
 {
 	MajorKey,

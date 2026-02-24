@@ -5,6 +5,10 @@ namespace Kermalis.MIDI;
 
 public abstract class MIDIChunk
 {
+	/// <summary>
+	/// If the chunk has errors, this will be set to <b>true</b>
+	/// </summary>
+	public abstract bool HasErrors { get; internal set; }
 	protected static long GetEndOffset(EndianBinaryReader r, uint size)
 	{
 		return r.Stream.Position + size;

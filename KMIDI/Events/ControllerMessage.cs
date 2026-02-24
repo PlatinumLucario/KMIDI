@@ -5,13 +5,25 @@ namespace Kermalis.MIDI;
 
 public sealed class ControllerMessage : MIDIMessage, IMIDIChannelMessage
 {
+	internal override bool IsInvalid { get; set; }
+
+	/// <summary>
+	/// The MIDI Channel used
+	/// </summary>
 	public byte Channel { get; }
 
+	/// <summary>
+	/// The Controller Type used
+	/// </summary>
 	public ControllerType Controller { get; }
+	/// <summary>
+	/// The Controller Value used
+	/// </summary>
 	public byte Value { get; }
 
-	internal ControllerMessage(EndianBinaryReader r, byte channel)
+	internal ControllerMessage(EndianBinaryReader r, byte channel, bool isInvalid)
 	{
+		IsInvalid = isInvalid;
 		Channel = channel;
 
 		Controller = r.ReadEnum<ControllerType>();
@@ -27,6 +39,13 @@ public sealed class ControllerMessage : MIDIMessage, IMIDIChannelMessage
 		}
 	}
 
+	/// <summary>
+	/// Creates a new Controller Message
+	/// </summary>
+	/// <param name="channel">The MIDI Channel to use</param>
+	/// <param name="controller">The Controller Type to use</param>
+	/// <param name="value">The Controller Value to use</param>
+	/// <exception cref="ArgumentOutOfRangeException"></exception>
 	public ControllerMessage(byte channel, ControllerType controller, byte value)
 	{
 		Utils.ValidateMIDIChannel(channel);
@@ -55,6 +74,10 @@ public sealed class ControllerMessage : MIDIMessage, IMIDIChannelMessage
 		w.WriteByte(Value);
 	}
 
+	/// <summary>
+	/// Outputs a string with the details of the <see cref="ControllerMessage"/>
+	/// </summary>
+	/// <returns>A string containing details of the <see cref="ControllerMessage"/></returns>
 	public override string ToString()
 	{
 		return $"{nameof(ControllerMessage)} [{nameof(Channel)} {Channel}"

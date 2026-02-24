@@ -14,6 +14,12 @@ public sealed class MIDIHeaderChunk : MIDIChunk
 	public ushort NumTracks { get; internal set; }
 	public TimeDivisionValue TimeDivision { get; }
 
+
+	/// <summary>
+	/// If the header chunk has errors, this will be set to <b>true</b>
+	/// </summary>
+	public override bool HasErrors { get; internal set; }
+
 	internal MIDIHeaderChunk(MIDIFormat format, TimeDivisionValue timeDivision)
 	{
 		if (format > MIDIFormat.Format2)
@@ -32,6 +38,7 @@ public sealed class MIDIHeaderChunk : MIDIChunk
 	{
 		if (size < 6)
 		{
+			// Critical error, can't proceed with reading the MIDI if the header size is too small
 			throw new InvalidDataException($"Invalid MIDI header length ({size})");
 		}
 
@@ -47,17 +54,44 @@ public sealed class MIDIHeaderChunk : MIDIChunk
 		NumTracks = r.ReadUInt16();
 		if (NumTracks == 0)
 		{
-			throw new InvalidDataException("MIDI has no tracks");
+			HasErrors = true;
+			InvalidDataException ex = new("MIDI has no tracks");
+			if (!MIDIFile.SkipErrors)
+			{
+				throw ex;
+			}
+			else
+			{
+				Debug.WriteLine(ex.Message);
+			}
 		}
 		if (Format == MIDIFormat.Format0 && NumTracks != 1)
 		{
-			throw new InvalidDataException($"MIDI format 0 must have 1 track, but this MIDI has {NumTracks}");
+			HasErrors = true;
+			InvalidDataException ex = new($"MIDI format 0 must have 1 track, but this MIDI has {NumTracks}");
+			if (!MIDIFile.SkipErrors)
+			{
+				throw ex;
+			}
+			else
+			{
+				Debug.WriteLine(ex.Message);
+			}
 		}
 
 		TimeDivision = new TimeDivisionValue(r.ReadUInt16());
 		if (!TimeDivision.IsValid())
 		{
-			throw new InvalidDataException($"Invalid MIDI time division ({TimeDivision})");
+			HasErrors = true;
+			InvalidDataException ex = new($"Invalid MIDI time division ({TimeDivision})");
+			if (!MIDIFile.SkipErrors)
+			{
+				throw ex;
+			}
+			else
+			{
+				Debug.WriteLine(ex.Message);
+			}
 		}
 
 		if (size > 6)

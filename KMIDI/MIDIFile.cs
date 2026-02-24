@@ -1,6 +1,7 @@
 ﻿using Kermalis.EndianBinaryIO;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -11,9 +12,29 @@ namespace Kermalis.MIDI;
 // TODO: Is a second headerchunk valid?
 public sealed class MIDIFile
 {
+	/// <summary>
+	/// The header chunk of the MIDI file
+	/// </summary>
 	public MIDIHeaderChunk HeaderChunk { get; }
+	/// <summary>
+	/// This contains the MIDI file stream data, which can be used for working with the MIDI file data manually<br></br>
+	/// <br></br>
+	/// Note: If a new MIDI file is being made, this property will remain <b>null</b> until the "Save()" method is used
+	/// </summary>
+	public Stream? Stream { get; private set; }
+	/// <summary>
+	/// If the MIDI has errors, this will be set to <b>true</b>
+	/// </summary>
+	public bool HasErrors { get; internal set; }
+	internal static bool SkipErrors;
 	private readonly List<MIDIChunk> _nonHeaderChunks;
-
+	/// <summary>
+	/// Creates a new MIDI file
+	/// </summary>
+	/// <param name="format">The type of MIDI format to use</param>
+	/// <param name="timeDivision">The Time Division Value of the MIDI</param>
+	/// <param name="tracksInitialCapacity">The amount of tracks that the MIDI can carry</param>
+	/// <exception cref="ArgumentException">Occurs when MIDI Format0 doesn't have 1 track</exception>
 	public MIDIFile(MIDIFormat format, TimeDivisionValue timeDivision, int tracksInitialCapacity)
 	{
 		if (format == MIDIFormat.Format0 && tracksInitialCapacity != 1)
@@ -24,13 +45,42 @@ public sealed class MIDIFile
 		HeaderChunk = new MIDIHeaderChunk(format, timeDivision); // timeDivision validated here
 		_nonHeaderChunks = new List<MIDIChunk>(tracksInitialCapacity);
 	}
-	public MIDIFile(Stream stream)
+	/// <summary>
+	/// Opens an existing MIDI data stream
+	/// </summary>
+	/// <param name="stream">The MIDI data stream that will be used</param>
+	/// <param name="skipErrors">Stops if there's an error if set to <b>false</b>, proceeds and skips non-critical errors if set to <b>true</b></param>
+	/// <exception cref="InvalidDataException">Thrown when the MIDI data stream is invalid</exception>
+	public MIDIFile(Stream stream, bool skipErrors = false)
 	{
+		SkipErrors = skipErrors;
+		Stream = stream;
 		var r = new EndianBinaryReader(stream, endianness: Endianness.BigEndian, ascii: true);
 		string chunkName = r.ReadString_Count(4);
 		if (chunkName != MIDIHeaderChunk.EXPECTED_NAME)
 		{
-			throw new InvalidDataException("MIDI header was not at the start of the file");
+			HasErrors = true;
+			InvalidDataException ex = new("MIDI header was not at the start of the file");
+			if (!SkipErrors)
+			{
+				throw ex;
+			}
+			else
+			{
+				Debug.WriteLine(ex.Message);
+				Debug.WriteLine("Attempting to find MIDI header in the entire file");
+				while (chunkName != MIDIHeaderChunk.EXPECTED_NAME && stream.Position < stream.Length)
+				{
+					long pos = r.Stream.Position;
+					chunkName = r.ReadString_Count(4);
+					r.Stream.Position = pos;
+					if (stream.Position < stream.Length - 1)
+					{
+						r.Stream.Position++;
+					}
+				}
+				Debug.WriteLine($"Found MIDI header at offset 0x{stream.Position:X}");
+			}
 		}
 
 		HeaderChunk = (MIDIHeaderChunk)ReadChunk(r, alreadyReadName: chunkName);
@@ -45,7 +95,30 @@ public sealed class MIDIFile
 		int trackCount = CountTrackChunks();
 		if (trackCount != HeaderChunk.NumTracks)
 		{
-			throw new InvalidDataException($"Unexpected track count: (Expected {HeaderChunk.NumTracks} but found {trackCount}");
+			HasErrors = true;
+			InvalidDataException ex = new($"Unexpected track count: (Expected {HeaderChunk.NumTracks} but found {trackCount}");
+			if (!SkipErrors)
+			{
+				throw ex;
+			}
+			else
+			{
+				Debug.WriteLine(ex.Message);
+			}
+		}
+
+		// Check each track for errors
+		foreach (var trackChunk in EnumerateTrackChunks())
+		{
+			if (trackChunk.HasErrors)
+			{
+				HasErrors = true;
+			}
+		}
+
+		if (HasErrors)
+		{
+			Debug.WriteLine("This MIDI contains errors, it might not work correctly in some applications");
 		}
 	}
 
@@ -60,7 +133,10 @@ public sealed class MIDIFile
 			default: return new MIDIUnsupportedChunk(chunkName, chunkSize, r);
 		}
 	}
-
+	/// <summary>
+	/// Adds a chunk to the MIDI file
+	/// </summary>
+	/// <param name="c">The MIDI chunk to add</param>
 	public void AddChunk(MIDIChunk c)
 	{
 		_nonHeaderChunks.Add(c);
@@ -69,6 +145,11 @@ public sealed class MIDIFile
 			HeaderChunk.NumTracks++;
 		}
 	}
+	/// <summary>
+	/// Removes a chunk from the MIDI file
+	/// </summary>
+	/// <param name="c">The MIDI chunk to remove</param>
+	/// <returns><b>true</b> if successful, otherwise <b>false</b></returns>
 	public bool RemoveChunk(MIDIChunk c)
 	{
 		bool success = _nonHeaderChunks.Remove(c);
@@ -78,6 +159,11 @@ public sealed class MIDIFile
 		}
 		return success;
 	}
+	/// <summary>
+	/// Enumerates the chunks in the MIDI file, to make it easier to read
+	/// </summary>
+	/// <param name="includeHeaderChunk">If this is set to <b>true</b>, it will include the header chunk as well</param>
+	/// <returns></returns>
 	public IEnumerable<MIDIChunk> EnumerateChunks(bool includeHeaderChunk)
 	{
 		if (includeHeaderChunk)
@@ -89,6 +175,10 @@ public sealed class MIDIFile
 			yield return c;
 		}
 	}
+	/// <summary>
+	/// Enumerates all the track chunks, to read each track chunk more easily
+	/// </summary>
+	/// <returns>The track chunks as an IEnumerable</returns>
 	public IEnumerable<MIDITrackChunk> EnumerateTrackChunks()
 	{
 		foreach (MIDIChunk c in _nonHeaderChunks)
@@ -99,6 +189,10 @@ public sealed class MIDIFile
 			}
 		}
 	}
+	/// <summary>
+	/// Counts the total number of tracks in the MIDI file
+	/// </summary>
+	/// <returns>The number of MIDI tracks</returns>
 	public int CountTrackChunks()
 	{
 		int count = 0;
@@ -116,7 +210,10 @@ public sealed class MIDIFile
 		_nonHeaderChunks.Clear();
 		_nonHeaderChunks.AddRange(nonHeaderChunks);
 	}
-
+	/// <summary>
+	/// Saves the MIDI file stream
+	/// </summary>
+	/// <param name="stream">The MIDI file stream</param>
 	public void Save(Stream stream)
 	{
 		var w = new EndianBinaryWriter(stream, endianness: Endianness.BigEndian, ascii: true);
@@ -127,9 +224,14 @@ public sealed class MIDIFile
 		{
 			c.Write(w);
 		}
+
+		Stream = stream;
 	}
 
-	// Don't put this as "ToString()" since it can be slow
+	/// <summary>
+	/// Don't put this as "ToString()" since it can be slow
+	/// </summary>
+	/// <returns>A string of the MIDI data hierarchy</returns>
 	public string GetHierarchy()
 	{
 		var str = new StringBuilder();

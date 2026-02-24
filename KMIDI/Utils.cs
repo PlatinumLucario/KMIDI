@@ -73,6 +73,46 @@ internal static class Utils
 			throw new ArgumentOutOfRangeException(nameof(channel), channel, null);
 		}
 	}
+	public static void ValidateSMPTEOffset(byte[] data)
+	{
+		float fps = 0;
+        switch (data[0] >> 6)
+        {
+            case 0:
+                fps = 24;
+                break;
+            case 1:
+                fps = 25;
+                break;
+            case 2:
+                fps = 29.97f;
+                break;
+            case 3:
+                fps = 30;
+                break;
+        }
+
+        if (data[0] > 23)
+		{
+			throw new InvalidDataException($"The hour value cannot be more than 23, the value specified was {data[0]}");
+		}
+		if (data[1] > 59)
+		{
+			throw new InvalidDataException($"The minute value cannot be more than 59, the value specified was {data[1]}");
+		}
+		if (data[2] > 59)
+		{
+			throw new InvalidDataException($"The second value cannot be more than 59, the value specified was {data[2]}");
+		}
+		if (data[3] > fps)
+		{
+			throw new InvalidDataException($"The frame rate value cannot be more than the hour's frames per second value ({fps}), the value specified was {data[3]}");
+		}
+		if (data[4] > 99)
+		{
+			throw new InvalidDataException($"The fractional frame value cannot be more than 99, the value specified was {data[4]}");
+		}
+	}
 	public static bool IsValidVariableLengthValue(int value)
 	{
 		return value is >= 0 and <= 0x0FFFFFFF; // Section 1.1

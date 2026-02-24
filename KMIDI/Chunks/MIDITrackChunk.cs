@@ -1,5 +1,6 @@
 ﻿using Kermalis.EndianBinaryIO;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -19,6 +20,11 @@ public sealed class MIDITrackChunk : MIDIChunk
 	public int NumEvents { get; private set; }
 	public int NumTicks => Last is null ? 0 : Last.Ticks;
 
+	/// <summary>
+	/// If the track chunk has errors, this will be set to <b>true</b>
+	/// </summary>
+	public override bool HasErrors { get; internal set; }
+
 	public MIDITrackChunk()
 	{
 		//
@@ -27,30 +33,51 @@ public sealed class MIDITrackChunk : MIDIChunk
 	{
 		long endOffset = GetEndOffset(r, size);
 
+		if (endOffset > r.Stream.Length)
+		{
+			// Critical error, since the size is beyond the scope of the MIDI file and can't go any further
+			HasErrors = true;
+			throw new InvalidDataException("The end offset for this track is invalid, it goes beyond the size of this MIDI file");
+		}
+
 		int ticks = 0;
 		byte runningStatus = 0;
 		bool foundEnd = false;
 		bool sysexContinue = false;
+		bool isInvalid = false;
 		while (r.Stream.Position < endOffset)
 		{
 			if (foundEnd)
 			{
-				throw new InvalidDataException($"Events found after the {nameof(MetaMessageType.EndOfTrack)} {nameof(MetaMessage)}");
+				HasErrors = true;
+				InvalidDataException ex = new($"Events found after the {nameof(MetaMessageType.EndOfTrack)} {nameof(MetaMessage)}");
+				if (!MIDIFile.SkipErrors)
+				{
+					throw ex;
+				}
+				else
+				{
+					Debug.WriteLine(ex.Message);
+					Debug.WriteLine("Proceeding to next event, despite error");
+					isInvalid = true;
+				}
 			}
 
-			ReadEvent(r, ref ticks, ref runningStatus, ref foundEnd, ref sysexContinue);
+			ReadEvent(r, ref ticks, ref runningStatus, ref foundEnd, ref sysexContinue, ref isInvalid);
 		}
 		if (!foundEnd)
 		{
+			HasErrors = true;
 			throw new InvalidDataException($"Could not find the {nameof(MetaMessageType.EndOfTrack)} {nameof(MetaMessage)}");
 		}
 
 		if (r.Stream.Position > endOffset)
 		{
+			HasErrors = true;
 			throw new InvalidDataException("Expected to read a certain amount of events, but the data was read incorrectly...");
 		}
 	}
-	private void ReadEvent(EndianBinaryReader r, ref int ticks, ref byte runningStatus, ref bool foundEnd, ref bool sysexContinue)
+	private void ReadEvent(EndianBinaryReader r, ref int ticks, ref byte runningStatus, ref bool foundEnd, ref bool sysexContinue, ref bool isInvalid)
 	{
 		long startOffset = r.Stream.Position;
 
@@ -60,6 +87,7 @@ public sealed class MIDITrackChunk : MIDIChunk
 		byte cmd = r.ReadByte();
 		if (sysexContinue && cmd != 0xF7)
 		{
+			HasErrors = true;
 			throw new InvalidDataException($"{nameof(SysExContinuationMessage)} was missing at 0x{r.Stream.Position - 1:X}");
 		}
 		if (cmd < 0x80)
@@ -75,19 +103,19 @@ public sealed class MIDITrackChunk : MIDIChunk
 			byte channel = (byte)(cmd & 0xF);
 			switch (cmd & ~0xF)
 			{
-				case 0x80: InsertMessage(ticks, new NoteOffMessage(r, channel)); break;
-				case 0x90: InsertMessage(ticks, new NoteOnMessage(r, channel)); break;
-				case 0xA0: InsertMessage(ticks, new PolyphonicPressureMessage(r, channel)); break;
-				case 0xB0: InsertMessage(ticks, new ControllerMessage(r, channel)); break;
-				case 0xC0: InsertMessage(ticks, new ProgramChangeMessage(r, channel)); break;
-				case 0xD0: InsertMessage(ticks, new ChannelPressureMessage(r, channel)); break;
-				case 0xE0: InsertMessage(ticks, new PitchBendMessage(r, channel)); break;
+				case 0x80: InsertMessage(ticks, new NoteOffMessage(r, channel, isInvalid)); break;
+				case 0x90: InsertMessage(ticks, new NoteOnMessage(r, channel, isInvalid)); break;
+				case 0xA0: InsertMessage(ticks, new PolyphonicPressureMessage(r, channel, isInvalid)); break;
+				case 0xB0: InsertMessage(ticks, new ControllerMessage(r, channel, isInvalid)); break;
+				case 0xC0: InsertMessage(ticks, new ProgramChangeMessage(r, channel, isInvalid)); break;
+				case 0xD0: InsertMessage(ticks, new ChannelPressureMessage(r, channel, isInvalid)); break;
+				case 0xE0: InsertMessage(ticks, new PitchBendMessage(r, channel, isInvalid)); break;
 			}
 		}
 		else if (cmd == 0xF0)
 		{
 			runningStatus = 0;
-			var msg = new SysExMessage(r);
+			var msg = new SysExMessage(r, isInvalid);
 			if (!msg.IsComplete)
 			{
 				sysexContinue = true;
@@ -98,7 +126,7 @@ public sealed class MIDITrackChunk : MIDIChunk
 			runningStatus = 0;
 			if (sysexContinue)
 			{
-				var msg = new SysExContinuationMessage(r);
+				var msg = new SysExContinuationMessage(r, isInvalid);
 				if (msg.IsFinished)
 				{
 					sysexContinue = false;
@@ -106,12 +134,12 @@ public sealed class MIDITrackChunk : MIDIChunk
 			}
 			else
 			{
-				InsertMessage(ticks, new EscapeMessage(r));
+				InsertMessage(ticks, new EscapeMessage(r, isInvalid));
 			}
 		}
 		else if (cmd == 0xFF)
 		{
-			var msg = new MetaMessage(r);
+			var msg = new MetaMessage(r, isInvalid);
 			if (msg.Type == MetaMessageType.EndOfTrack)
 			{
 				foundEnd = true;
@@ -120,6 +148,7 @@ public sealed class MIDITrackChunk : MIDIChunk
 		}
 		else
 		{
+			HasErrors = true;
 			throw new InvalidDataException($"Unknown MIDI command found at 0x{startOffset:X} (0x{cmd:X})");
 		}
 	}
@@ -194,7 +223,11 @@ public sealed class MIDITrackChunk : MIDIChunk
 
 		NumEvents++;
 	}
-
+	/// <summary>
+	/// Removes a specified MIDI event
+	/// </summary>
+	/// <param name="ev">The MIDI event to remove</param>
+	/// <returns><b>true</b> if the event was found and removed, otherwise <b>false</b></returns>
 	public bool RemoveEvent(IMIDIEvent ev)
 	{
 		if (ev is not MIDIEvent e)
@@ -252,6 +285,19 @@ public sealed class MIDITrackChunk : MIDIChunk
 		}
 
 		return false;
+	}
+	/// <summary>
+	/// If an event is in an invalid location, such as after an EndOfTrack event, use this method to remove all invalid location events
+	/// </summary>
+	public void RemoveInvalidEvents()
+	{
+		for (var ev = First; ev != null; ev = ev.Next)
+		{
+			if (ev.Msg.IsInvalid)
+			{
+				RemoveEvent(ev);
+			}
+		}
 	}
 
 	public override void Write(EndianBinaryWriter w)

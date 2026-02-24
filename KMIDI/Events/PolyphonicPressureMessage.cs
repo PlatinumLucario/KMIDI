@@ -5,13 +5,25 @@ namespace Kermalis.MIDI;
 
 public sealed class PolyphonicPressureMessage : MIDIMessage, IMIDIChannelMessage
 {
+	internal override bool IsInvalid { get; set; }
+
+	/// <summary>
+	/// The MIDI Channel used
+	/// </summary>
 	public byte Channel { get; }
 
+	/// <summary>
+	/// The MIDI Note used
+	/// </summary>
 	public MIDINote Note { get; }
+	/// <summary>
+	/// The amount of Pressure used
+	/// </summary>
 	public byte Pressure { get; }
 
-	internal PolyphonicPressureMessage(EndianBinaryReader r, byte channel)
+	internal PolyphonicPressureMessage(EndianBinaryReader r, byte channel, bool isInvalid)
 	{
+		IsInvalid = isInvalid;
 		Channel = channel;
 
 		Note = r.ReadEnum<MIDINote>();
@@ -27,6 +39,13 @@ public sealed class PolyphonicPressureMessage : MIDIMessage, IMIDIChannelMessage
 		}
 	}
 
+	/// <summary>
+	/// Creates a new Polyphonic Pressure Message
+	/// </summary>
+	/// <param name="channel">The MIDI Channel to use</param>
+	/// <param name="note">The Note to use</param>
+	/// <param name="pressure">The amount of Pressure to use</param>
+	/// <exception cref="ArgumentOutOfRangeException">If the Pressure is more than 127</exception>
 	public PolyphonicPressureMessage(byte channel, MIDINote note, byte pressure)
 	{
 		Utils.ValidateMIDIChannel(channel);
@@ -51,6 +70,10 @@ public sealed class PolyphonicPressureMessage : MIDIMessage, IMIDIChannelMessage
 		w.WriteByte(Pressure);
 	}
 
+	/// <summary>
+	/// Outputs a string with the details of the <see cref="PolyphonicPressureMessage"/>
+	/// </summary>
+	/// <returns>A string containing details of the <see cref="PolyphonicPressureMessage"/></returns>
 	public override string ToString()
 	{
 		return $"{nameof(PolyphonicPressureMessage)} [{nameof(Channel)} {Channel}"
