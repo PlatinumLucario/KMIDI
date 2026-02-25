@@ -10,8 +10,17 @@ public sealed class MIDIHeaderChunk : MIDIChunk
 {
 	internal const string EXPECTED_NAME = "MThd";
 
+	/// <summary>
+	/// The type of format that the MIDI file uses, either Format0, Format1 or Format2
+	/// </summary>
 	public MIDIFormat Format { get; }
+	/// <summary>
+	/// The Number of Tracks in this MIDI file
+	/// </summary>
 	public ushort NumTracks { get; internal set; }
+	/// <summary>
+	/// The Time Division value of this MIDI file
+	/// </summary>
 	public TimeDivisionValue TimeDivision { get; }
 
 
@@ -102,6 +111,11 @@ public sealed class MIDIHeaderChunk : MIDIChunk
 		}
 	}
 
+	/// <summary>
+	/// Writes the MIDI file data to memory
+	/// </summary>
+	/// <param name="w">The EndianBinaryWriter stream to use</param>
+	/// <exception cref="InvalidDataException">If the MIDI Format is Format0 and doesn't have exactly 1 track</exception>
 	public override void Write(EndianBinaryWriter w)
 	{
 		if (Format == MIDIFormat.Format0 && NumTracks != 1)
@@ -117,6 +131,10 @@ public sealed class MIDIHeaderChunk : MIDIChunk
 		w.WriteUInt16(TimeDivision.RawValue);
 	}
 
+	/// <summary>
+	/// Outputs the Format, NumTracks and TimeDivision values as a string
+	/// </summary>
+	/// <returns>A string containing the Format, NumTracks and TimeDivision values</returns>
 	public override string ToString()
 	{
 		return $"<{EXPECTED_NAME}>"

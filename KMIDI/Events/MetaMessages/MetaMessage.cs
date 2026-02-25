@@ -1,8 +1,6 @@
 ﻿using Kermalis.EndianBinaryIO;
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Text;
 
 namespace Kermalis.MIDI;
 
@@ -46,7 +44,7 @@ public sealed partial class MetaMessage : MIDIMessage
 
 		if (VariableLength == 0)
 		{
-			Data = Array.Empty<byte>();
+			Data = [];
 		}
 		else
 		{
@@ -113,6 +111,10 @@ public sealed partial class MetaMessage : MIDIMessage
 		return -1; // Section 3 - Not required to support all types
 	}
 
+	/// <summary>
+	/// Outputs the Meta Message to a string
+	/// </summary>
+	/// <returns>A string containing the details of the Meta Message</returns>
 	public override string ToString()
 	{
 		string? arg;

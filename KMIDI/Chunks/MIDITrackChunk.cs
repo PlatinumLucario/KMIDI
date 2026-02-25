@@ -13,11 +13,20 @@ public sealed class MIDITrackChunk : MIDIChunk
 	private MIDIEvent? _first;
 	private MIDIEvent? _last;
 
+	/// <summary>
+	/// The first event found in the track chunk
+	/// </summary>
 	public IMIDIEvent? First => _first;
+	/// <summary>
+	/// The last event found in the track chunk
+	/// </summary>
 	public IMIDIEvent? Last => _last;
 
 	/// <summary>Includes the end of track event</summary>
 	public int NumEvents { get; private set; }
+	/// <summary>
+	/// The total number of ticks in the track chunk
+	/// </summary>
 	public int NumTicks => Last is null ? 0 : Last.Ticks;
 
 	/// <summary>
@@ -300,6 +309,11 @@ public sealed class MIDITrackChunk : MIDIChunk
 		}
 	}
 
+	/// <summary>
+	/// Writes the track chunk to a EndianBinaryWriter stream
+	/// </summary>
+	/// <param name="w">The EndianBinaryWriter stream to use</param>
+	/// <exception cref="InvalidDataException">If there's events found after EndOfTrack Meta Message type or if there's no EndOfTrack Meta Message in this track chunk</exception>
 	public override void Write(EndianBinaryWriter w)
 	{
 		w.WriteChars_Count(EXPECTED_NAME, 4);
@@ -391,6 +405,10 @@ public sealed class MIDITrackChunk : MIDIChunk
 		msg.Write(w);
 	}
 
+	/// <summary>
+	/// Outputs the NumEvents, NumTicks and each event to the string
+	/// </summary>
+	/// <returns>A string containing the NumEvents, NumTicks and each event</returns>
 	public override string ToString()
 	{
 		var str = new StringBuilder($"<{EXPECTED_NAME}>");

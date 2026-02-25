@@ -1,5 +1,8 @@
 ﻿namespace Kermalis.MIDI;
 
+/// <summary>
+/// The MIDI Note values
+/// </summary>
 public enum MIDINote : byte
 {
 	C_M1,

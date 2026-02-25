@@ -1,6 +1,9 @@
 ﻿namespace Kermalis.MIDI;
 
 // Section 2.1
+/// <summary>
+/// The MIDI Format Type
+/// </summary>
 public enum MIDIFormat : ushort
 {
 	/// <summary>Contains a single multi-channel track</summary>
@@ -11,17 +14,29 @@ public enum MIDIFormat : ushort
 	Format2,
 }
 
+/// <summary>
+/// The Time Division Type
+/// </summary>
 public enum TimeDivisionType : byte
 {
+	/// <summary>Pulses Per Quarter Note</summary>
 	PPQN,
+	/// <summary>Society of Motion Picture and Television Engineers</summary>
 	SMPTE,
 }
 
+/// <summary>
+/// The SMPTE Format Type
+/// </summary>
 public enum SMPTEFormat : byte
 {
+	/// <summary>24 frame/s</summary>
 	Smpte24 = 24,
+	/// <summary>25 frame/s</summary>
 	Smpte25 = 25,
+	/// <summary>29.97 frame/s</summary>
 	Smpte30Drop = 29,
+	/// <summary>30 frame/s</summary>
 	Smpte30 = 30,
 }
 

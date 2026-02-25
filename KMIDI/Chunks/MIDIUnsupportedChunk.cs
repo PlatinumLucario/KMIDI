@@ -9,6 +9,7 @@ public sealed class MIDIUnsupportedChunk : MIDIChunk
 {
 	/// <summary>Length 4</summary>
 	public string ChunkName { get; }
+	/// <summary>The Data byte array containing the values</summary>
 	public byte[] Data { get; }
 
 	/// <summary>
@@ -16,6 +17,12 @@ public sealed class MIDIUnsupportedChunk : MIDIChunk
 	/// </summary>
 	public override bool HasErrors { get; internal set; }
 
+	/// <summary>
+	/// Creates a new MIDI Unsupported Chunk
+	/// </summary>
+	/// <param name="chunkName">The name of the chunk</param>
+	/// <param name="data">The data byte array to insert</param>
+	/// <exception cref="ArgumentOutOfRangeException">If the chunk name length is not equal to 4</exception>
 	public MIDIUnsupportedChunk(string chunkName, byte[] data)
 	{
 		if (chunkName.Length != 4)
@@ -49,6 +56,10 @@ public sealed class MIDIUnsupportedChunk : MIDIChunk
 		}
 	}
 
+	/// <summary>
+	/// Writes the Unsupported MIDI Chunk to memory
+	/// </summary>
+	/// <param name="w">The EndianBinaryWriter stream to use</param>
 	public override void Write(EndianBinaryWriter w)
 	{
 		w.WriteChars_Count(ChunkName, 4);
@@ -57,6 +68,10 @@ public sealed class MIDIUnsupportedChunk : MIDIChunk
 		w.WriteBytes(Data);
 	}
 
+	/// <summary>
+	/// Outputs the ChunkName and Data byte array length as a string
+	/// </summary>
+	/// <returns>A string containing the ChunkName and Data byte array length</returns>
 	public override string ToString()
 	{
 		return $"<{ChunkName}> [{Data.Length} bytes]";

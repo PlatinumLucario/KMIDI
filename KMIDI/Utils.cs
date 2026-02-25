@@ -7,11 +7,13 @@ namespace Kermalis.MIDI;
 
 internal static class Utils
 {
+	// Checks if it's a Power Of Two
 	public static bool IsPowerOfTwo(int value)
 	{
 		return (value & (value - 1)) == 0;
 	}
 
+	// Reads the Variable Length
 	public static int ReadVariableLength(EndianBinaryReader r)
 	{
 		// 28 bits allowed
@@ -44,6 +46,7 @@ internal static class Utils
 
 		return value;
 	}
+	// Writes a Variable Length
 	public static void WriteVariableLength(EndianBinaryWriter w, int value)
 	{
 		ValidateVariableLengthValue(value);
@@ -66,6 +69,7 @@ internal static class Utils
 		}
 	}
 
+	// Checks if the MIDI Channel is valid
 	public static void ValidateMIDIChannel(byte channel)
 	{
 		if (channel > 15)
@@ -73,28 +77,32 @@ internal static class Utils
 			throw new ArgumentOutOfRangeException(nameof(channel), channel, null);
 		}
 	}
+	// Checks if the SMPTE Offset values are valid
 	public static void ValidateSMPTEOffset(byte[] data)
 	{
-		float fps = 0;
-        switch (data[0] >> 6)
-        {
-            case 0:
-                fps = 24;
-                break;
-            case 1:
-                fps = 25;
-                break;
-            case 2:
-                fps = 29.97f;
-                break;
-            case 3:
-                fps = 30;
-                break;
-        }
-
-        if (data[0] > 23)
+		int fpsCap = 0;
+		byte hourBits = (byte)(data[0] << 3);
+		hourBits >>= 3;
+		int frameBits = data[0] >> 5;
+		switch (frameBits)
 		{
-			throw new InvalidDataException($"The hour value cannot be more than 23, the value specified was {data[0]}");
+			case 0:
+				fpsCap = 24;
+				break;
+			case 1:
+				fpsCap = 25;
+				break;
+			case 2:
+				fpsCap = 29;
+				break;
+			case 3:
+				fpsCap = 30;
+				break;
+		}
+
+		if (hourBits > 23)
+		{
+			throw new InvalidDataException($"The hour bits cannot be more than 23, the value specified was {hourBits}");
 		}
 		if (data[1] > 59)
 		{
@@ -104,19 +112,21 @@ internal static class Utils
 		{
 			throw new InvalidDataException($"The second value cannot be more than 59, the value specified was {data[2]}");
 		}
-		if (data[3] > fps)
+		if (data[3] > fpsCap)
 		{
-			throw new InvalidDataException($"The frame rate value cannot be more than the hour's frames per second value ({fps}), the value specified was {data[3]}");
+			throw new InvalidDataException($"The frame rate value cannot be more than or equal to the frames per second cap value ({fpsCap}), the value specified was {data[3]}");
 		}
 		if (data[4] > 99)
 		{
 			throw new InvalidDataException($"The fractional frame value cannot be more than 99, the value specified was {data[4]}");
 		}
 	}
+	// Checks if the Variable Length Value is valid or not
 	public static bool IsValidVariableLengthValue(int value)
 	{
 		return value is >= 0 and <= 0x0FFFFFFF; // Section 1.1
 	}
+	// Checks if the Variable Length Value is valid, throws an exception if it's invalid
 	private static void ValidateVariableLengthValue(int value)
 	{
 		if (!IsValidVariableLengthValue(value))
@@ -124,6 +134,7 @@ internal static class Utils
 			throw new ArgumentOutOfRangeException(nameof(value), value, null);
 		}
 	}
+	// Throws an InvalidDataException if the Message Data is invalid
 	[DoesNotReturn]
 	public static void ThrowInvalidMessageDataException(string msgType, string msgParam, long pos, object value)
 	{

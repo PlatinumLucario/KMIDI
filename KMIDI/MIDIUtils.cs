@@ -4,9 +4,12 @@ namespace Kermalis.MIDI;
 
 public static class MIDIUtils
 {
-	public static ReadOnlySpan<uint> InstrumentColorsRGB => new uint[128]
-	{
-		0xCF7FFF, // AcousticGrandPiano
+	/// <summary>
+	/// Outputs the instrument color codes
+	/// </summary>
+	public static ReadOnlySpan<uint> InstrumentColorsRGB =>
+    [
+        0xCF7FFF, // AcousticGrandPiano
 		0xBF6CFF, // BrightAcousticPiano
 		0xA750FF, // ElectricGrandPiano
 		0x6C00B7, // HonkyTonkPiano
@@ -134,5 +137,5 @@ public static class MIDIUtils
 		0xA0A3A8, // Helicopter
 		0xC6A28D, // Applause
 		0x7F7FBF, // Gunshot
-	};
+	];
 }
