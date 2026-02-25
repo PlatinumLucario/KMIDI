@@ -1,5 +1,6 @@
 ﻿using Kermalis.EndianBinaryIO;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -306,6 +307,18 @@ public sealed class MIDITrackChunk : MIDIChunk
 			{
 				RemoveEvent(ev);
 			}
+		}
+	}
+
+	/// <summary>
+	/// Enumerates all the track events, to read each MIDI event more easily
+	/// </summary>
+	/// <returns>The MIDI Events as an IEnumerable</returns>
+	public IEnumerable<IMIDIEvent> EnumerateEvents()
+	{
+		for (IMIDIEvent ev = First!; ev is not null; ev = ev.Next!)
+		{
+			yield return ev;
 		}
 	}
 
