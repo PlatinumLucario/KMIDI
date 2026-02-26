@@ -24,7 +24,7 @@ public sealed partial class MetaMessage : MIDIMessage
 		return new MetaMessage((MetaMessageType)type, data);
 	}
 	[Obsolete("Using the MetaMessageType enum with CreateTextMessage has been deprecated, please use the MetaMessageTextType enum with CreateTextMessage instead")]
-	public static MetaMessage CreateTextMessage(MetaMessageType type, string text) => CreateTextMessage(type, text);
+	public static MetaMessage CreateTextMessage(MetaMessageType type, string text) => CreateTextMessage((MetaMessageTextType)type, text);
 	/// <summary>
 	/// Reads and outputs the text of the <see cref="MetaMessage"/>
 	/// </summary>

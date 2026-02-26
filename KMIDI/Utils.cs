@@ -114,7 +114,7 @@ internal static class Utils
 		}
 		if (data[3] > fpsCap)
 		{
-			throw new InvalidDataException($"The frame rate value cannot be more than or equal to the frames per second cap value ({fpsCap}), the value specified was {data[3]}");
+			throw new InvalidDataException($"The frame rate value cannot be more than the frames per second cap value ({fpsCap}), the value specified was {data[3]}");
 		}
 		if (data[4] > 99)
 		{
