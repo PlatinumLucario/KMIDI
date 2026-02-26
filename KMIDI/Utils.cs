@@ -80,7 +80,7 @@ internal static class Utils
 	// Checks if the SMPTE Offset values are valid
 	public static void ValidateSMPTEOffset(byte[] data)
 	{
-		int fpsCap = 0;
+		int fpsCap = 30;
 		byte hourBits = (byte)(data[0] << 3);
 		hourBits >>= 3;
 		int frameBits = data[0] >> 5;
